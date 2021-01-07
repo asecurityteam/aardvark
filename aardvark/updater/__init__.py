@@ -60,6 +60,28 @@ class AccountToUpdate(object):
             self.on_complete.send(self)
             return 0, details
 
+    def _list_roles(self):
+        if not self.session:
+            return list_roles(**self.conn_details)
+        else:
+            client = self._get_client()
+            paginator = client.get_paginator('list_roles')
+            roles = []
+            for page in paginator.paginate():
+                roles += page['Roles']
+            return roles
+
+    def _list_users(self):
+        if not self.session:
+            return list_roles(**self.conn_details)
+        else:
+            client = self._get_client()
+            paginator = client.get_paginator('list_users')
+            roles = []
+            for page in paginator.paginate():
+                roles += page['Users']
+            return roles
+
     def _get_arns(self):
         """
         Gets a list of all Role ARNs in a given account, optionally limited by
@@ -70,10 +92,10 @@ class AccountToUpdate(object):
 
         account_arns = set()
 
-        for role in list_roles(**self.conn_details):
+        for role in self._list_roles():
             account_arns.add(role['Arn'])
 
-        for user in list_users(**self.conn_details):
+        for user in self._list_users():
             account_arns.add(user['Arn'])
 
         for page in client.get_paginator('list_policies').paginate(Scope='Local'):
