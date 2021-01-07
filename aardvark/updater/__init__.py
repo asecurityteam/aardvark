@@ -16,18 +16,20 @@ class AccountToUpdate(object):
     on_error = Signal()
     on_failure = Signal()
 
-    def __init__(self, current_app, account_number, role_name, arns_list):
+    def __init__(self, current_app, account_number, role_name, arns_list, session=None):
         self.current_app = current_app
         self.account_number = account_number
         self.role_name = role_name
         self.arn_list = arns_list
-        self.conn_details = {
-            'account_number': account_number,
-            'assume_role': role_name,
-            'session_name': 'aardvark',
-            'region': self.current_app.config.get('REGION') or 'us-east-1',
-            'arn_partition': self.current_app.config.get('ARN_PARTITION') or 'aws'
-        }
+        self.session = session
+        if self.session is None:
+            self.conn_details = {
+                'account_number': account_number,
+                'assume_role': role_name,
+                'session_name': 'aardvark',
+                'region': self.current_app.config.get('REGION') or 'us-east-1',
+                'arn_partition': self.current_app.config.get('ARN_PARTITION') or 'aws'
+            }
         self.max_access_advisor_job_wait = 5 * 60  # Wait 5 minutes before giving up on jobs
 
     def update_account(self):
@@ -101,6 +103,11 @@ class AccountToUpdate(object):
 
         :return: boto3 IAM client in target account & role
         """
+
+        # If we already got a session use that instead
+        if self.session:
+            return self.session.client('iam')
+
         try:
             client = boto3_cached_conn(
                 'iam', **self.conn_details)
